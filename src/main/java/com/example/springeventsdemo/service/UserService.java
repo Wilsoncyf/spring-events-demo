@@ -5,6 +5,7 @@ import com.example.springeventsdemo.event.UserRegisteredEvent;
 import lombok.RequiredArgsConstructor; // Lombok 注解: 为 final 字段生成构造函数
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service // 标记此类为 Spring 的服务 Bean
 @RequiredArgsConstructor // Lombok: 为 final 字段生成构造函数 (用于依赖注入)
@@ -18,25 +19,25 @@ public class UserService {
      * @param name  用户名
      * @param email 邮箱
      */
-    public void registerUser(String name, String email) {
-        System.out.println("UserService: 正在处理用户注册: " + name);
-        // ... 模拟保存用户 ...
-        System.out.println("UserService: 用户数据已保存 (模拟)。");
+    @Transactional
+    public void registerUser(String name, String email) throws RuntimeException { // 明确抛出 RuntimeException 以触发回滚
+        System.out.println("\nUserService (Tx): 正在处理用户注册: " + name);
         User newUser = new User(name, email);
+        // userRepository.save(newUser); // 模拟保存
+        System.out.println("UserService (Tx): 用户数据已保存 (模拟)。");
 
-        // === 发布标准的 UserRegisteredEvent (之前的代码) ===
         UserRegisteredEvent registrationEvent = new UserRegisteredEvent(this, newUser);
-        System.out.println("UserService: 正在创建 UserRegisteredEvent 实例。");
-        System.out.println("UserService: 正在发布 UserRegisteredEvent...");
-        this.eventPublisher.publishEvent(registrationEvent);
-        System.out.println("UserService: UserRegisteredEvent 已发布。");
+        System.out.println("UserService (Tx): 正在发布 UserRegisteredEvent (在事务中)...");
+        this.eventPublisher.publishEvent(registrationEvent); // 事件在事务内部发布
+        System.out.println("UserService (Tx): 事件已发布。");
 
-        // === ✨ 新增：直接发布 User 这个 POJO 对象作为事件 ===
-        System.out.println("UserService: 正在直接发布 User POJO 对象作为事件...");
-        this.eventPublisher.publishEvent(newUser); // <--- 直接发布 POJO！
-        System.out.println("UserService: User POJO 事件已发布。");
+        // 3. 模拟事务中后续操作可能失败
+        if (name.contains("失败君")) { // 让特定名字触发失败
+            System.out.println("UserService (Tx): 检测到 '失败君', 模拟事务后续操作失败，准备抛出异常...");
+            throw new RuntimeException("模拟事务失败!"); // 抛出运行时异常，默认会触发事务回滚 ❌
+        }
 
-
-        System.out.println("UserService: 用户注册流程完成: " + name);
+        System.out.println("UserService (Tx): 用户注册流程事务性完成 (准备提交): " + name);
+        // 如果没有异常，事务将在此处准备提交 ✅
     }
 }

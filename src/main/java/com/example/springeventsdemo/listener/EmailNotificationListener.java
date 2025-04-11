@@ -1,36 +1,40 @@
-package com.example.springeventsdemo.listener; // 新建 listener 包
+package com.example.springeventsdemo.listener;
 
-import com.example.springeventsdemo.domain.User;
 import com.example.springeventsdemo.event.UserRegisteredEvent;
-import org.springframework.context.ApplicationListener;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.event.TransactionPhase; // 1. 导入事务阶段
+import org.springframework.transaction.event.TransactionalEventListener; // 2. 导入注解
 
-/**
- * 一个监听 UserRegisteredEvent 的监听器示例，使用 ApplicationListener 接口。
- */
-@Component // <-- 重要！必须将监听器注册为一个 Bean，Spring 才能发现它
-public class EmailNotificationListener implements ApplicationListener<UserRegisteredEvent> { // <-- 实现接口并指定监听的事件类型
+// import org.springframework.core.annotation.Order;
+// import org.springframework.scheduling.annotation.Async;
 
-    @Override
-    public void onApplicationEvent(UserRegisteredEvent event) { // <-- 实现事件处理方法
-        System.out.println(); // 加个空行，让日志更清晰
-        System.out.println("===== EmailNotificationListener 开始处理 ====="); // 标识是哪个监听器在工作
+@Component
+// @Order(10) // 可选
+public class EmailNotificationListener /* 不再需要实现接口 */ {
 
-        // 1. 从事件对象中获取需要的数据
-        User registeredUser = event.getUser(); // 获取事件携带的用户信息
-        Object eventSource = event.getSource(); // 获取发布事件的源对象
-        long timestamp = event.getTimestamp(); // 获取事件发生的时间戳
+    // 3. 使用 @TransactionalEventListener，默认监听 AFTER_COMMIT
+    @TransactionalEventListener // 默认 phase = TransactionPhase.AFTER_COMMIT
+    // @Async // 事务性监听器也可以是异步的
+    public void handleUserRegistrationCompletion(UserRegisteredEvent event) {
+        System.out.println();
+        System.out.println("===== EmailNotificationListener (@TransactionalEventListener - AFTER_COMMIT) 开始处理 =====");
+        System.out.println("事件信息: 用户 " + event.getUser().getName() + " 注册事务已成功提交。");
+        System.out.println("操作: 正在发送欢迎邮件给 " + event.getUser().getEmail() + "...");
+        // sendEmailService.sendWelcomeEmail(event.getUser().getEmail());
+        System.out.println("操作: 模拟邮件发送成功！");
+        System.out.println("===== EmailNotificationListener (AFTER_COMMIT) 处理完毕 =====");
+        System.out.println();
+    }
 
-        System.out.println("事件信息: [用户: " + registeredUser.getName() + ", 邮箱: " + registeredUser.getEmail() + "]");
-        System.out.println("事件来源: " + eventSource.getClass().getSimpleName()); // 打印事件源的类名
-        System.out.println("事件时间戳: " + timestamp);
-
-        // 2. 执行具体的监听逻辑（这里我们模拟发送邮件）
-        System.out.println("操作: 正在准备向邮箱 " + registeredUser.getEmail() + " 发送欢迎邮件...");
-        // 实际场景下，这里会调用邮件发送服务
-        // sendEmailService.sendWelcomeEmail(registeredUser.getEmail());
-        System.out.println("操作: 模拟邮件已发送成功！");
-        System.out.println("===== EmailNotificationListener 处理完毕 =====");
-        System.out.println(); // 加个空行
+    // 4. (可选) 添加一个监听事务回滚的方法
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_ROLLBACK)
+    public void handleUserRegistrationRollback(UserRegisteredEvent event) {
+        System.out.println();
+        System.out.println("===== EmailNotificationListener (@TransactionalEventListener - AFTER_ROLLBACK) 开始处理 =====");
+        System.out.println("事件信息: 用户 " + event.getUser().getName() + " 的注册事务已回滚！");
+        System.out.println("操作: 不应发送欢迎邮件。可能需要执行一些清理或补偿操作。");
+        // logRollback(event.getUser());
+        System.out.println("===== EmailNotificationListener (AFTER_ROLLBACK) 处理完毕 =====");
+        System.out.println();
     }
 }
