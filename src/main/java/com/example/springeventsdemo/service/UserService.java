@@ -20,19 +20,23 @@ public class UserService {
      */
     public void registerUser(String name, String email) {
         System.out.println("UserService: 正在处理用户注册: " + name);
-
-        // 模拟核心业务逻辑：例如保存用户信息到数据库...
+        // ... 模拟保存用户 ...
         System.out.println("UserService: 用户数据已保存 (模拟)。");
         User newUser = new User(name, email);
 
-        // 1. 创建事件实例
-        UserRegisteredEvent registrationEvent = new UserRegisteredEvent(this, newUser); // 'this' 指当前的 UserService 实例
+        // === 发布标准的 UserRegisteredEvent (之前的代码) ===
+        UserRegisteredEvent registrationEvent = new UserRegisteredEvent(this, newUser);
         System.out.println("UserService: 正在创建 UserRegisteredEvent 实例。");
+        System.out.println("UserService: 正在发布 UserRegisteredEvent...");
+        this.eventPublisher.publishEvent(registrationEvent);
+        System.out.println("UserService: UserRegisteredEvent 已发布。");
 
-        // 2. 发布事件
-        System.out.println("UserService: 正在通过 ApplicationEventPublisher 发布事件...");
-        this.eventPublisher.publishEvent(registrationEvent); // ✨ 发布事件！
+        // === ✨ 新增：直接发布 User 这个 POJO 对象作为事件 ===
+        System.out.println("UserService: 正在直接发布 User POJO 对象作为事件...");
+        this.eventPublisher.publishEvent(newUser); // <--- 直接发布 POJO！
+        System.out.println("UserService: User POJO 事件已发布。");
 
-        System.out.println("UserService: 事件已发布。用户注册流程完成: " + name);
+
+        System.out.println("UserService: 用户注册流程完成: " + name);
     }
 }
